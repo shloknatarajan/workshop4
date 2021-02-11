@@ -78,14 +78,14 @@ class ProjectController(app_manager.RyuApp):
         parser = datapath.ofproto_parser       
 
         #TODO: 1) Generate the Match Rule for the flow. What other parameters could we try to match? What is a wildcard?
-        #match = 
+        match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
 
         #TODO: 1) Create the required instruction that indicates the operation
-        #inst =  
+        inst =  [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
         #TODO: 1) Create the modify flow message with fields: datapath, match, cookie=0, command, idle_timeout =0, hard_timeout=0, priority=1 and instructions
         ## Why do you think priority is one?
-        mod = None
+        mod = parser.OFPFlowMod(datapath=datapath, match=match, command=ofproto.OFPFC_ADD, cookie=0, idle_timeout=0, hard_timeout=0, priority=1, instructions=inst)
         
         datapath.send_msg(mod)
  
@@ -100,7 +100,7 @@ class ProjectController(app_manager.RyuApp):
         """
         print("switch_features_handler is called")
         #TODO: 1) Get the datapath (switch) from the ev object
-        #datapath =
+        datapath = ev.msg.datapath
 
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -239,6 +239,31 @@ class ProjectController(app_manager.RyuApp):
         ofproto = datapath.ofproto
         ofp_parser = datapath.ofproto_parser
         #TODO: Multi Path Transmission
+        ofp = datapath.ofproto
+        ofp_parser = datapath.ofproto_parser
+
+        port_1 = 3
+        actions_1 = [ofp_parser.OFPActionOutput(port_1)]
+
+        port_2 = 2
+        actions_2 = [ofp_parser.OFPActionOutput(port_2)]
+
+        weight_1 = 50
+        weight_2 = 50
+
+        watch_port = ofproto_v1_3.OFPP_ANY
+        watch_group = ofproto_v1_3.OFPQ_ALL
+
+        buckets = [
+            ofp_parser.OFPBucket(weight_1, watch_port, watch_group, actions_1),
+            ofp_parser.OFPBucket(weight_2, watch_port, watch_group, actions_2)]
+
+        group_id = 50
+        req = ofp_parser.OFPGroupMod(
+            datapath, ofp.OFPFC_ADD,
+            ofp.OFPGT_SELECT, group_id, buckets)
+
+        datapath.send_msg(req)
 	# It behaves as a load balancer for the topology of the workshop
 
         # TODO: Complete switch one
@@ -273,7 +298,7 @@ class ProjectController(app_manager.RyuApp):
         # Don't do anything with IPV6 packets.
         if isinstance(ip_pkt_6, ipv6.ipv6):
             actions = []
-            match = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IPV6)
+            match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IPV6)
             self.add_flow(datapath, 0, 1, match, actions)
             return 
 
