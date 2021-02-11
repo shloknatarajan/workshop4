@@ -11,7 +11,6 @@ class SimpleTopo(Topo):
         Topo.__init__(self)
  
         # Add hosts and switches
-        configuration = dict(bw=5, delay=None,max_queue_size=10, loss=0, use_htb=True)                
         ## Add hosts        
         h1 = self.addHost("h1")
         h2 = self.addHost("h2")

@@ -29,6 +29,7 @@ from ryu.ofproto import ofproto_v1_3_parser
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
+from ryu.lib.packet import arp, ipv4, ipv6
 from ryu.lib import mac
  
 from ryu.topology.api import get_switch, get_link
@@ -71,10 +72,10 @@ class ProjectController(app_manager.RyuApp):
         :rtype: None
         """
         #TODO: 1) Get the OpenFlow protocol from the datapath
-        #ofproto = 
+        ofproto = datapath.ofproto
 
         #TODO: 1) Get the Parser for the protocol from the datapath
-        #parser =       
+        parser = datapath.ofproto_parser       
 
         #TODO: 1) Generate the Match Rule for the flow. What other parameters could we try to match? What is a wildcard?
         #match = 
@@ -174,7 +175,7 @@ class ProjectController(app_manager.RyuApp):
         out = self._build_packet_out(datapath, ofproto.OFP_NO_BUFFER,
                                      ofproto.OFPP_CONTROLLER,
                                      ofproto.OFPP_FLOOD, msg.data)
-        datapath.send_message(out)
+        datapath.send_msg(out)
 
     #TODO: 1) What is the ARP protocol?  
     def arp_forwarding(self, msg, src_ip, dst_ip, eth_pkt):
@@ -266,13 +267,13 @@ class ProjectController(app_manager.RyuApp):
         eth = pkt.get_protocols(ethernet.ethernet)[0]
         ip_pkt = pkt.get_protocol(ipv4.ipv4)
         ip_pkt_6 = pkt.get_protocol(ipv6.ipv6)
-        arp_pkg = pkt.get_protocol(arp.arp)
+        arp_pkt = pkt.get_protocol(arp.arp)
         
 
         # Don't do anything with IPV6 packets.
         if isinstance(ip_pkt_6, ipv6.ipv6):
             actions = []
-            match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IPV6)
+            match = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IPV6)
             self.add_flow(datapath, 0, 1, match, actions)
             return 
 
