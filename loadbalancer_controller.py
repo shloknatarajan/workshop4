@@ -83,7 +83,7 @@ class ProjectController(app_manager.RyuApp):
         #TODO: 1) Create the required instruction that indicates the operation
         inst =  [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
-        #TODO: 1) Create the modify flow message with fields: datapath, match, cookie=0, command, idle_timeout =0, hard_timeout=0, priority=1 and instructions
+        #TODO: 1) Create the modify flow message with fields: datapath, cookie=0, command, idle_timeout =0, hard_timeout=0, priority=1 and instructions
         ## Why do you think priority is one?
         mod = parser.OFPFlowMod(datapath=datapath, match=match, command=ofproto.OFPFC_ADD, cookie=0, idle_timeout=0, hard_timeout=0, priority=1, instructions=inst)
         
@@ -201,7 +201,7 @@ class ProjectController(app_manager.RyuApp):
             match = parser.OFPMatch(in_port=in_port, eth_dst=eth_pkt.dst,
                                     eth_type=eth_pkt.ethertype)
             actions = [parser.OFPActionOutput(out_port)]
-            self.add_flow(datapath, 0, 1, match, actions)
+            self.add_flow(datapath, 0, 1, actions)
             self.send_packet_out(datapath, msg.buffer_id, in_port,
                                  out_port, msg.data)
             self.logger.debug("Reply ARP to knew host")
@@ -237,16 +237,15 @@ class ProjectController(app_manager.RyuApp):
         :rtype:  None 
         """
         ofproto = datapath.ofproto
-        ofp_parser = datapath.ofproto_parser
+        parser = datapath.ofproto_parser
         #TODO: Multi Path Transmission
-        ofp = datapath.ofproto
-        ofp_parser = datapath.ofproto_parser
-
         port_1 = 3
-        actions_1 = [ofp_parser.OFPActionOutput(port_1)]
+        queue_1 = parser.OFPActionSetQueue(0)
+        actions_1 = [queue_1, parser.OFPActionOutput(port_1)]
 
         port_2 = 2
-        actions_2 = [ofp_parser.OFPActionOutput(port_2)]
+        queue_2 = parser.OFPActionSetQueue(0)
+        actions_2 = [queue_2, parser.OFPActionOutput(port_2)]
 
         weight_1 = 50
         weight_2 = 50
@@ -255,15 +254,18 @@ class ProjectController(app_manager.RyuApp):
         watch_group = ofproto_v1_3.OFPQ_ALL
 
         buckets = [
-            ofp_parser.OFPBucket(weight_1, watch_port, watch_group, actions_1),
-            ofp_parser.OFPBucket(weight_2, watch_port, watch_group, actions_2)]
+        parser.OFPBucket(weight_1, watch_port, watch_group, actions_1),
+        parser.OFPBucket(weight_2, watch_port, watch_group, actions_2)]
 
         group_id = 50
-        req = ofp_parser.OFPGroupMod(
-            datapath, ofp.OFPFC_ADD,
-            ofp.OFPGT_SELECT, group_id, buckets)
-
+        req = parser.OFPGroupMod(
+            datapath, datapath.ofproto.OFPFC_ADD,
+            datapath.ofproto.OFPGT_SELECT, group_id, buckets)
         datapath.send_msg(req)
+
+
+
+
 	# It behaves as a load balancer for the topology of the workshop
 
         # TODO: Complete switch one
@@ -286,7 +288,7 @@ class ProjectController(app_manager.RyuApp):
 
         # create a Packet object out of the payload
         # TODO: 1) Create a Packet from the message data
-        # pkt = 
+        pkt = packet.Packet(msg.data)
 
         # TODO: 1) Why do we need obtain the information for four different protocols?
         eth = pkt.get_protocols(ethernet.ethernet)[0]
@@ -298,8 +300,8 @@ class ProjectController(app_manager.RyuApp):
         # Don't do anything with IPV6 packets.
         if isinstance(ip_pkt_6, ipv6.ipv6):
             actions = []
-            match = parser.OFPMatch(eth_type=ether.ETH_TYPE_IPV6)
-            self.add_flow(datapath, 0, 1, match, actions)
+            match = parser.OFPMatch(ether_types.ETH_TYPE_IPV6)
+            self.add_flow(datapath, 0, 1, actions)
             return 
 
         # ARP Protcol
@@ -336,7 +338,7 @@ class ProjectController(app_manager.RyuApp):
                     match = parser.OFPMatch(in_port=in_port,
                                             eth_type=eth.ethertype,
                                             ipv4_src=ip_pkt.src)
-                    self.add_flow(datapath, 0, 3, match, actions)
+                    self.add_flow(datapath, 0, 3, actions)
                     # asign output at 2
                     self.send_packet_out(datapath, msg.buffer_id,
                                          in_port, 2, msg.data)
@@ -348,7 +350,7 @@ class ProjectController(app_manager.RyuApp):
                     match = parser.OFPMatch(in_port=in_port, eth_dst=eth.dst,
                                             eth_type=eth.ethertype)
                    #Add the flow to the switch
-                    self.add_flow(datapath, 0, 1, match, actions)
+                    self.add_flow(datapath, 0, 1, actions)
                     #Send packet to its destination
                     self.send_packet_out(datapath, msg.buffer_id, in_port,
                                          out_port, msg.data)
